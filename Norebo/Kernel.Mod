@@ -145,7 +145,7 @@ MODULE Kernel;  (*derived from NW/PR  11.4.86 / 27.12.95 / 4.2.2014*)
     VAR u, v, w: INTEGER;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
     IF w = 0 THEN New(a, b)
-    ELSE Norebo.Halt(100 + w)
+    ELSE Norebo.Trap(w, 0, 0)
     END
   END Trap;
 

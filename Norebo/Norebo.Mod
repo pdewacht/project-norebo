@@ -5,6 +5,7 @@ MODULE Norebo;
     noreboHalt* = 1;
     noreboArgc* = 2;
     noreboArgv* = 3;
+    noreboTrap* = 4;
     filesNew* = 11;
     filesOld* = 12;
     filesRegister* = 13;
@@ -36,6 +37,10 @@ MODULE Norebo;
   PROCEDURE Halt*(exitcode: INTEGER);
   BEGIN SysReq(noreboHalt, exitcode, 0, 0)
   END Halt;
+
+  PROCEDURE Trap*(trap, modname, pos: INTEGER);
+  BEGIN SysReq(noreboTrap, trap, modname, pos);
+  END Trap;
 
   PROCEDURE ParamCount*(): INTEGER;
   BEGIN SysReq(noreboArgc, 0, 0, 0)

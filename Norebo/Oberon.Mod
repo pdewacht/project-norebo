@@ -187,7 +187,19 @@ MODULE Oberon; (*derived from JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.
     Norebo.ParamStr(0, p); Call(p, res); Norebo.Halt(res)
   END ParamCall;
 
-BEGIN User[0] := 0X;
-  ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
+  PROCEDURE Trap(VAR a: INTEGER; b: INTEGER);
+    VAR u, v, w, pos, name: INTEGER; mod: Modules.Module;
+  BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
+    IF w = 0 THEN Kernel.New(a, b)
+    ELSE (*trap*) pos := v DIV 100H MOD 10000H; mod := Modules.root;
+      WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;
+      IF mod # NIL THEN name := SYSTEM.ADR(mod.name) ELSE name := 0 END ;
+      Norebo.Trap(w, name, pos)
+    END
+  END Trap;
+
+BEGIN 
+  Kernel.Install(SYSTEM.ADR(Trap), 20H);
+  User[0] := 0X; ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
   OpenLog; ParamCall;
 END Oberon.

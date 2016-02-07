@@ -94,6 +94,27 @@ static uint32_t norebo_argv(uint32_t idx, uint32_t adr, uint32_t siz) {
   }
 }
 
+static bool files_get_name(char *name, uint32_t adr);
+
+static uint32_t norebo_trap(uint32_t trap, uint32_t name_adr, uint32_t pos) {
+  char message[100];
+  switch (trap) {
+    case 1: strcpy(message, "array index out of range"); break;
+    case 2: strcpy(message, "type guard failure"); break;
+    case 3: strcpy(message, "array or string copy overflow"); break;
+    case 4: strcpy(message, "access via NIL pointer"); break;
+    case 5: strcpy(message, "illegal procedure call"); break;
+    case 6: strcpy(message, "integer division by zero"); break;
+    case 7: strcpy(message, "assertion violated"); break;
+    default: sprintf(message, "unknown trap %d", trap); break;
+  }
+  char name[NameLength];
+  if (!files_get_name(name, name_adr)) {
+    strcpy(name, "(unknown)");
+  }
+  errx(100 + trap, "%s at %s pos %d", message, name, pos);
+}
+
 /* Files module */
 
 static FILE *path_fopen(const char *path, const char *filename, const char *mode) {
@@ -352,6 +373,7 @@ static sysreq_fn sysreq_table[] = {
   [ 1] = norebo_halt,
   [ 2] = norebo_argc,
   [ 3] = norebo_argv,
+  [ 4] = norebo_trap,
 
   [11] = files_new,
   [12] = files_old,
