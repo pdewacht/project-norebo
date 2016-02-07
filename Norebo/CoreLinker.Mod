@@ -29,7 +29,7 @@ MODULE CoreLinker;  (*derived from NW 20.10.2013*)
       filename: ModuleName;
   BEGIN i := 0;
     WHILE name[i] # 0X DO filename[i] := name[i]; INC(i) END ;
-    filename[i] := "."; filename[i+1] := "r"; filename[i+2] := "s"; filename[i+3] := "c"; filename[i+4] := 0X;
+    filename[i] := "."; filename[i+1] := "r"; filename[i+2] := "s"; filename[i+3] := "x"; filename[i+4] := 0X;
     RETURN Files.Old(filename)
   END ThisFile;
 
