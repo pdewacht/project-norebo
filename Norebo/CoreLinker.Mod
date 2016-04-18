@@ -240,7 +240,7 @@ MODULE CoreLinker;  (*derived from NW 20.10.2013*)
     IF res = 0 THEN
       F := Files.New(corename); Files.Set(R, F, 0);
       Files.WriteInt(R, 9B1EA38DH); FOR i := 4 TO 1023 DO Files.WriteByte(R, 0) END ;
-      FOR i := 1 TO AllocPtr DIV 4 DO Files.WriteInt(R, buffer[i]) END ;
+      FOR i := 0 TO AllocPtr DIV 4 - 1 DO Files.WriteInt(R, buffer[i]) END ;
       Files.Register(F)
     END
   END LinkDiskImage;
@@ -277,7 +277,7 @@ MODULE CoreLinker;  (*derived from NW 20.10.2013*)
     END
   END LinkCommand;
 
-  PROCEDURE LinkDisk*;  (*untested*)
+  PROCEDURE LinkDisk*;
   BEGIN LinkCommand(LinkDiskImage)
   END LinkDisk;
 
