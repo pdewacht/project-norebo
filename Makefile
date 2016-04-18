@@ -5,3 +5,4 @@ norebo: Runtime/norebo.c Runtime/risc-cpu.c Runtime/risc-cpu.h
 
 clean:
 	rm -f norebo
+	rm -rf build1 build2 build3

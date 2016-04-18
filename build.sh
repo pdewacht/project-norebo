@@ -2,38 +2,68 @@
 set -e
 make
 
-export NOREBO_PATH="$PWD/Norebo:$PWD/Oberon:$PWD/Bootstrap"
+ROOT="$PWD"
 
-mkdir -p build
-cd build
+if [ -e build1 ] || [ -e build2 ] || [ -e build3 ]; then
+  echo >&2 "Build directories already exist, delete them using 'make clean' first."
+  exit 1
+fi
+mkdir build1 build2 build3
 
-../norebo ORP.Compile \
-        Norebo.Mod/s \
-        Kernel.Mod/s \
-	FileDir.Mod/s \
-	Files.Mod/s \
-	Modules.Mod/s \
-	Fonts.Mod/s \
-	Texts.Mod/s \
-	RS232.Mod/s \
-	Oberon.Mod/s \
-	CoreLinker.Mod/s \
-	ORS.Mod/s \
-	ORB.Mod/s \
-	ORG.Mod/s \
-	ORP.Mod/s \
-	ORTool.Mod/s
+function rename_rsc_to_rsx {
+  for i in *.rsc; do
+    mv $i ${i%.rsc}.rsx
+  done
+}
 
-for i in *.rsc; do
-  mv $i ${i%.rsc}.rsx
-done
+function rename_rsx_to_rsc {
+  for i in *.rsx; do
+    mv $i ${i%.rsx}.rsc
+  done
+}
 
-../norebo CoreLinker.LinkSerial Modules InnerCore
+function compile_everything {
+  ../norebo ORP.Compile \
+	Norebo.Mod/s \
+	Kernel.Mod/s \
+  	FileDir.Mod/s \
+  	Files.Mod/s \
+  	Modules.Mod/s \
+  	Fonts.Mod/s \
+  	Texts.Mod/s \
+  	RS232.Mod/s \
+  	Oberon.Mod/s \
+  	CoreLinker.Mod/s \
+  	ORS.Mod/s \
+  	ORB.Mod/s \
+  	ORG.Mod/s \
+  	ORP.Mod/s \
+  	ORTool.Mod/s
+  rename_rsc_to_rsx
+  ../norebo CoreLinker.LinkSerial Modules InnerCore
+  rename_rsx_to_rsc
+}
 
-for i in *.rsx; do
-  mv $i ${i%.rsx}.rsc
-done
+echo '=== Stage 1 ==='
+cd build1
+export NOREBO_PATH="$ROOT/Norebo:$ROOT/Oberon:$ROOT/Bootstrap"
+compile_everything
+cd ..
 
-../norebo ORP.Compile MagicSquares.Mod
+echo
+echo '=== Stage 2 ==='
+cd build2
+export NOREBO_PATH="$ROOT/Norebo:$ROOT/Oberon:$ROOT/build1"
+compile_everything
+cd ..
 
-../norebo MagicSquares.Generate 4
+echo
+echo '=== Stage 3 ==='
+cd build3
+export NOREBO_PATH="$ROOT/Norebo:$ROOT/Oberon:$ROOT/build2"
+compile_everything
+cd ..
+
+echo
+echo '=== Verification === '
+diff -r build2 build3
