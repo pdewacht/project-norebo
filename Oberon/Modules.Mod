@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016*)
   IMPORT SYSTEM, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 80;
 
@@ -27,7 +27,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013*)
     RETURN Files.Old(filename)
   END ThisFile;
 
-  PROCEDURE error(n: INTEGER; name: ModuleName);
+  PROCEDURE error(n: INTEGER; name: ARRAY OF CHAR);
   BEGIN res := n; importing := name
   END error;
 
