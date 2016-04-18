@@ -120,8 +120,7 @@ MODULE Files;  (*derived from NW 11.1.86 / 22.9.93 / 25.5.95 / 25.12.95 / 15.8.2
   END Set;
 
   PROCEDURE Pos*(VAR r: Rider): INTEGER;
-  BEGIN Norebo.SysReq(Norebo.filesTell, r.file.handle, 0, 0)
-    RETURN Norebo.res
+  BEGIN RETURN r.pos
   END Pos;
 
   PROCEDURE Base*(VAR r: Rider): File;
