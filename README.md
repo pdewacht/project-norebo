@@ -11,9 +11,20 @@ if you want to develop it further.
 
 * `Runtime/` RISC5 emulator and operating system interface.
 * `Oberon/` Unmodified source code from Project Oberon 2013.
-* `Norebo/` Customized Norebo modules.
+* `Norebo/` Norebo-specific and new modules.
 * `Bootstrap/` Pre-compiled modules to bootstrap Norebo.
-* `build.sh` The build script. See Norebo in action.
+* `build.sh` Script to rebuild Norebo. See Norebo in action.
+
+## PO2013 image build tools
+
+This repository also contains tools to build fresh PO2013 filesystem
+images. The script `build-po2013-image.py` handles it completely
+automatically, the corresponding CSV files lists the files that should
+be installed on the image.
+
+Supporting Oberon modules are stored in `Norebo`: a virtual file
+system (`VDiskUtil`/`VFile`) and a static linker for the Inner Core.
+All this is based on code from PO2013.
 
 ## File handling
 
