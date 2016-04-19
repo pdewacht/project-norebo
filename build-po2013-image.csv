@@ -4,9 +4,9 @@ source,FileDir.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/
 source,Files.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Files.Mod.txt
 source,Modules.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Modules.Mod.txt
 text,Input.Orig.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Input.Mod.txt
-source,Input.Mod,https://raw.githubusercontent.com/pdewacht/oberon-risc-emu/master/Oberon/Input.Mod
+source,Input.Mod,https://raw.githubusercontent.com/pdewacht/oberon-risc-emu/master/Mods/Input.Mod
 text,Display.Orig.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Display.Mod.txt
-source,Display.Mod,https://raw.githubusercontent.com/pdewacht/oberon-risc-emu/master/Oberon/Display.Mod
+source,Display.Mod,https://raw.githubusercontent.com/pdewacht/oberon-risc-emu/master/Mods/Display.Mod
 source,Viewers.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Viewers.Mod.txt
 source,Fonts.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Fonts.Mod.txt
 source,Texts.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Texts.Mod.txt
@@ -49,4 +49,4 @@ source,Stars.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/St
 source,Tools.Mod,https://www.inf.ethz.ch/personal/wirth/ProjectOberon/Sources/Tools.Mod.txt
 archive,systools.zip,http://www.paddedcell.com/projectoberon/wirth/Sources/systools.zip
 archive,apptools.zip,http://www.paddedcell.com/projectoberon/wirth/Sources/apptools.zip
-source,Clipboard.Mod,https://raw.githubusercontent.com/pdewacht/oberon-risc-emu/master/Oberon/Clipboard.Mod
+source,Clipboard.Mod,https://raw.githubusercontent.com/pdewacht/oberon-risc-emu/master/Mods/Clipboard.Mod
