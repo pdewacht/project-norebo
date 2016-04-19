@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 15.4.2016  Oberon compiler for RISC in Oberon-07*)
+MODULE ORP; (*N. Wirth 1.7.97 / 18.4.2016  Oberon compiler for RISC in Oberon-07*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -184,7 +184,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 15.4.2016  Oberon compiler for RISC in Oberon-07
   
   BEGIN (*check for assignment compatibility*)
     RETURN (t0 = t1)
-      OR (t0.form = ORB.Array) & (t1.form = ORB.Array) & (t0.len = t1.len) & (t0.base = t1.base)
+      OR (t0.form = ORB.Array) & (t1.form = ORB.Array) & (t0.base =  t1.base) & (t0.len = t1.len)
       OR (t0.form = ORB.Record) & (t1.form = ORB.Record)  & IsExtension(t0, t1)
       OR ~varpar &
         ((t0.form = ORB.Pointer) & (t1.form = ORB.Pointer)  & IsExtension(t0.base, t1.base)
@@ -389,7 +389,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 15.4.2016  Oberon compiler for RISC in Oberon-07
         ELSIF xf = ORB.Real THEN ORG.RealRelation(rel, x, y)
         ELSIF (xf IN {ORB.Set, ORB.Pointer, ORB.Proc, ORB.NilTyp, ORB.Bool}) THEN
           IF rel <= ORS.neq THEN ORG.IntRelation(rel, x, y) ELSE ORS.Mark("only = or #") END
-        ELSIF (xf = ORB.Array) & (x.type.base.form = ORB.Char)  THEN ORG.StringRelation(rel, x, y)
+        ELSIF (xf = ORB.Array) & (x.type.base.form = ORB.Char) OR (xf = ORB.String) THEN
+          ORG.StringRelation(rel, x, y)
         ELSE ORS.Mark("illegal comparison")
         END
       ELSIF (xf IN {ORB.Pointer, ORB.Proc}) & (yf = ORB.NilTyp)
@@ -498,12 +499,13 @@ MODULE ORP; (*N. Wirth 1.7.97 / 15.4.2016  Oberon compiler for RISC in Oberon-07
               IF (x.type.form <= ORB.Pointer) OR (x.type.form = ORB.Proc) THEN ORG.Store(x, y)
               ELSE ORG.StoreStruct(x, y)
               END
+            ELSIF (x.type.form = ORB.Array) & (y.type.form = ORB.Array) & (x.type.base = y.type.base) & (y.type.len < 0) THEN
+              ORG.StoreStruct(x, y)
+            ELSIF (x.type.form = ORB.Array) & (x.type.base.form = ORB.Char) & (y.type.form = ORB.String) THEN
+              ORG.CopyString(x, y)
             ELSIF (x.type.form = ORB.Int) & (y.type.form = ORB.Int) THEN ORG.Store(x, y)  (*BYTE*)
             ELSIF (x.type.form = ORB.Char) & (y.type.form = ORB.String) & (y.b = 2) THEN
               ORG.StrToChar(y); ORG.Store(x, y)
-            ELSIF (x.type.form = ORB.Array) & (x.type.base.form = ORB.Char) & ( (y.type.form = ORB.String)
-                 OR (y.type.form = ORB.Array) & (y.type.base.form = ORB.Char) & (y.type.len = -1))  THEN
-              ORG.CopyString(x, y)
             ELSE ORS.Mark("illegal assignment")
             END
           ELSIF sym = ORS.eql THEN ORS.Mark("should be :="); ORS.Get(sym); expression(y)
@@ -757,6 +759,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 15.4.2016  Oberon compiler for RISC in Oberon-07
         IF obj # NIL THEN
           IF (obj.class = ORB.Typ) & (obj.type.form IN {ORB.Record, ORB.NoTyp}) THEN
             CheckRecLevel(obj.lev); type.base := obj.type
+          ELSIF obj.class = ORB.Mod THEN ORS.Mark("external base type not implemented")
           ELSE ORS.Mark("no valid base type")
           END
         ELSE CheckRecLevel(level); (*enter into list of forward references to be fixed in Declarations*)
@@ -987,7 +990,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 15.4.2016  Oberon compiler for RISC in Oberon-07
     Oberon.Collect(0)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  15..4.2016");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  18.4.2016");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0

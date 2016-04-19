@@ -1,4 +1,4 @@
-MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
+MODULE ORG; (* NW  18.4.2016  code generator in Oberon-07 for RISC*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -90,7 +90,7 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
   PROCEDURE CheckRegs*;
   BEGIN
     IF RH # 0 THEN ORS.Mark("Reg Stack"); RH := 0 END ;
-    IF pc >= maxCode - 40 THEN ORS.Mark("Program too long") END
+    IF pc >= maxCode - 40 THEN ORS.Mark("program too long") END
   END CheckRegs;
 
   PROCEDURE SetCC(VAR x: Item; n: LONGINT);
@@ -98,7 +98,7 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
   END SetCC;
 
   PROCEDURE Trap(cond, num: LONGINT);
-  BEGIN num := ORS.Pos()*100H + num*10H + MT; Put3(BLR, cond, num)
+  BEGIN Put3(BLR, cond, ORS.Pos()*100H + num*10H + MT)
   END Trap;
 
   (*handling of forward reference, fixups of branch addresses and constant tables*)
@@ -344,7 +344,7 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
-    T.len := dc; data[dcw] := s; INC(dcw);
+    T.len := dc; data[dcw] := s; INC(dcw);  (*len used as address*)
     k := T.nofpar;   (*extension level!*)
     IF k > 3 THEN ORS.Mark("ext level too large")
     ELSE Q(T, dcw);
@@ -513,7 +513,7 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
     IF (x.mode = ORB.Const) & ( y.mode = ORB.Const) THEN
       IF x.a <= y.a THEN x.a := LSL(2, y.a) - LSL(1, x.a) ELSE x.a := 0 END
     ELSE
-      IF (x.mode = ORB.Const) & (x.a < 16) THEN x.a := LSL(-1, x.a)
+      IF (x.mode = ORB.Const) & (x.a <= 16) THEN x.a := LSL(-1, x.a)
       ELSE load(x); Put1(Mov, RH, 0, -1); Put0(Lsl, x.r, RH, x.r)
       END ;
       IF (y.mode = ORB.Const) & (y.a < 16) THEN Put1(Mov, RH, 0, LSL(-2, y.a)); y.mode := Reg; y.r := RH; incR
@@ -621,9 +621,10 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
 
   PROCEDURE StoreStruct*(VAR x, y: Item); (* x := y, frame = 0 *)
     VAR s, pc0: LONGINT;
-  BEGIN loadAdr(x); loadAdr(y);
+  BEGIN
     IF y.type.size # 0 THEN
-      IF x.type.form = ORB.Array THEN
+      loadAdr(x); loadAdr(y);
+      IF (x.type.form = ORB.Array) &  (x.type.len > 0) THEN
         IF y.type.len >= 0 THEN 
           IF x.type.size = y.type.size THEN Put1a(Mov, RH, 0, (y.type.size+3) DIV 4)
           ELSE ORS.Mark("different length/size, not implemented")
@@ -648,30 +649,28 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
     RH := 0
   END StoreStruct;
 
+  PROCEDURE CopyString*(VAR x, y: Item);  (* x := y *) 
+     VAR len: LONGINT;
+   BEGIN loadAdr(x); len := x.type.len;
+    IF len >= 0 THEN
+      IF y.b > len THEN ORS.Mark("string too long") END
+    ELSIF check THEN Put2(Ldr, RH, x.r, 4);  (*array length check*)
+      Put1(Cmp,RH, RH, y.b); Trap(NE, 3)
+    END ;
+    loadStringAdr(y);
+    Put2(Ldr, RH, y.r, 0); Put1(Add, y.r, y.r, 4);
+    Put2(Str, RH, x.r, 0); Put1(Add, x.r, x.r, 4);
+    Put1(Asr, RH, RH, 24); Put3(BC, NE,  -6);  RH := 0
+   END CopyString;
+
+  (* Code generation for parameters *)
+  
   PROCEDURE OpenArrayParam*(VAR x: Item);
   BEGIN loadAdr(x);
     IF x.type.len >= 0 THEN Put1a(Mov, RH, 0, x.type.len) ELSE Put2(Ldr, RH, SP, x.a+4+frame) END ;
     incR
   END OpenArrayParam;
 
-  PROCEDURE CopyString*(VAR x, y: Item);  (*from y to x*) 
-     VAR len, rl: LONGINT;
-   BEGIN len := x.type.len;
-     IF (len >= 0) & (y.type.form = ORB.String) & (y.b > len) THEN
-      ORS.Mark("string too long")
-    ELSE OpenArrayParam(x); rl := RH-1;
-      IF y.type.form = ORB.String THEN loadStringAdr(y)
-      ELSE loadAdr(y) (*open array of char*)
-      END;
-       IF check THEN Put1(Sub, rl, rl, 1); Trap(MI, 3) END;
-       Put2(Ldr, RH, y.r, 0); Put1(Add, y.r, y.r, 4);
-       Put2(Str, RH, x.r, 0); Put1(Add, x.r, x.r, 4);
-       Put1(Asr, RH, RH, 24); Put3(BC, NE,  -6);  RH := 0
-    END
-   END CopyString;
-
-  (* Code generation for parameters *)
-  
   PROCEDURE VarParam*(VAR x: Item; ftype: ORB.Type);
     VAR xmd: INTEGER;
   BEGIN xmd := x.mode; loadAdr(x);
@@ -799,7 +798,7 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
       WHILE a < parblksize DO Put2(Str, r, SP, a); INC(r); INC(a, 4) END
     ELSE (*interrupt procedure*)
       Put1(Sub, SP, SP, 12); Put2(Str, 0, SP, 0); Put2(Str, 1, SP, 4); Put2(Str, SB, SP, 8)
-      (*R0, R1, SB saved os stack*)
+      (*R0, R1, SB saved on stack*)
     END
   END Enter;
 
@@ -853,7 +852,7 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
   END Assert; 
 
   PROCEDURE New*(VAR x: Item);
-  BEGIN loadAdr(x); loadTypTagAdr(x.type.base); Put3(BLR, 7, MT); RH := 0; invalSB
+  BEGIN loadAdr(x); loadTypTagAdr(x.type.base); Trap(7, 0); RH := 0; invalSB
   END New;
 
   PROCEDURE Pack*(VAR x, y: Item);
@@ -997,7 +996,9 @@ MODULE ORG; (* NW  15.4.2016  code generator in Oberon-07 for RISC*)
 
   PROCEDURE Open*(v: INTEGER);
   BEGIN pc := 0; tdx := 0; strx := 0; RH := 0; fixorgP := 0; fixorgD := 0; fixorgT := 0; check := v # 0; version := v;
-    IF v = 0 THEN pc := 8 END
+    IF v = 0 THEN pc := 1;
+      REPEAT code[pc] := 0; INC(pc) UNTIL pc = 8
+    END
   END Open;
 
   PROCEDURE SetDataSize*(dc: LONGINT);
