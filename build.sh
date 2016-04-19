@@ -10,15 +10,9 @@ if [ -e build1 ] || [ -e build2 ] || [ -e build3 ]; then
 fi
 mkdir build1 build2 build3
 
-function rename_rsc_to_rsx {
-  for i in *.rsc; do
-    mv $i ${i%.rsc}.rsx
-  done
-}
-
-function rename_rsx_to_rsc {
-  for i in *.rsx; do
-    mv $i ${i%.rsx}.rsc
+function rename {
+  for i in *.$1; do
+    mv $i ${i%.$1}.$2
   done
 }
 
@@ -39,15 +33,16 @@ function compile_everything {
   	ORG.Mod/s \
   	ORP.Mod/s \
   	ORTool.Mod/s
-  rename_rsc_to_rsx
+  rename rsc rsx
   ../norebo CoreLinker.LinkSerial Modules InnerCore
-  rename_rsx_to_rsc
+  rename rsx rsc
 }
 
 echo '=== Stage 1 ==='
 cd build1
 export NOREBO_PATH="$ROOT/Norebo:$ROOT/Oberon:$ROOT/Bootstrap"
 compile_everything
+rename smb smx
 cd ..
 
 echo
@@ -55,6 +50,7 @@ echo '=== Stage 2 ==='
 cd build2
 export NOREBO_PATH="$ROOT/Norebo:$ROOT/Oberon:$ROOT/build1"
 compile_everything
+rename smb smx
 cd ..
 
 echo
@@ -62,8 +58,9 @@ echo '=== Stage 3 ==='
 cd build3
 export NOREBO_PATH="$ROOT/Norebo:$ROOT/Oberon:$ROOT/build2"
 compile_everything
+rename smb smx
 cd ..
 
 echo
 echo '=== Verification === '
-diff -r build2 build3
+diff -r build2 build3 && echo 'OK: Stage 2 and Stage 3 are identical.'
