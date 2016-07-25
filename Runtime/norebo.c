@@ -18,7 +18,6 @@
 #define InnerCore "InnerCore"
 
 #define MemBytes (8 * 1024 * 1024)
-#define MemWords (MemBytes / 4)
 #define StackOrg 0x80000
 #define MaxFiles 500
 #define NameLength 32
@@ -29,7 +28,7 @@ struct File {
   bool registered;
 };
 
-static uint32_t mem[MemWords];
+static uint8_t mem[MemBytes];
 static uint32_t sysarg[3], sysres;
 static uint32_t nargc;
 static char **nargv;
@@ -38,31 +37,40 @@ static DIR *dir;
 
 /* Memory access */
 
+static uint32_t le32_to_host(uint8_t *ptr) {
+  return ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
+}
+
 static uint32_t mem_read_word(uint32_t adr) {
-  if (adr / 4 >= MemWords) {
+  if (adr >= MemBytes - 3) {
     errx(1, "Memory read out of bounds (address %#08x)", adr);
   }
-  return mem[adr / 4];
+  return le32_to_host(mem + adr);
 }
 
 static uint8_t mem_read_byte(uint32_t adr) {
-  uint32_t w = mem_read_word(adr);
-  return (uint8_t)(w >> (adr % 4 * 8));
+  if (adr >= MemBytes) {
+    errx(1, "Memory read out of bounds (address %#08x)", adr);
+  }
+  return mem[adr];
 }
 
 static void mem_write_word(uint32_t adr, uint32_t val) {
-  if (adr / 4 >= MemWords) {
+  if (adr >= MemBytes - 3) {
     errx(1, "Memory write out of bounds (address %#08x)", adr);
   }
-  mem[adr / 4] = val;
+  uint8_t *ptr = mem + adr;
+  ptr[0] = (uint8_t)val;
+  ptr[1] = (uint8_t)(val >> 8);
+  ptr[2] = (uint8_t)(val >> 16);
+  ptr[3] = (uint8_t)(val >> 24);
 }
 
 static void mem_write_byte(uint32_t adr, uint32_t val) {
-  uint32_t w = mem_read_word(adr);
-  uint32_t shift = (adr & 3) * 8;
-  w &= ~(0xFFu << shift);
-  w |= (uint32_t)val << shift;
-  mem_write_word(adr, w);
+  if (adr >= MemBytes) {
+    errx(1, "Memory read out of bounds (address %#08x)", adr);
+  }
+  mem[adr] = (uint8_t)val;
 }
 
 static void mem_check_range(uint32_t adr, uint32_t siz, const char *proc) {
@@ -86,7 +94,7 @@ static uint32_t norebo_argv(uint32_t idx, uint32_t adr, uint32_t siz) {
   if (idx < nargc) {
     if (siz > 0) {
       strncpy((char *)mem + adr, nargv[idx], siz - 1);
-      ((char *)mem)[adr + siz - 1] = 0;
+      mem[adr + siz - 1] = 0;
     }
     return (uint32_t)strlen(nargv[idx]);
   } else {
@@ -158,7 +166,7 @@ static bool files_check_name(char *name) {
 
 static bool files_get_name(char *name, uint32_t adr) {
   mem_check_range(adr, NameLength, "Files.GetName");
-  memcpy(name, (char *)mem + adr, NameLength);
+  memcpy(name, mem + adr, NameLength);
   return files_check_name(name);
 }
 
@@ -257,15 +265,15 @@ static uint32_t files_tell(uint32_t h, uint32_t _2, uint32_t _3) {
 static uint32_t files_read(uint32_t h, uint32_t adr, uint32_t siz) {
   files_check_handle(h, "Files.Read");
   mem_check_range(adr, siz, "Files.Read");
-  size_t r = fread((char *)mem + adr, 1, siz, files[h].f);
-  memset((char *)mem + adr + r, 0, siz - r);
+  size_t r = fread(mem + adr, 1, siz, files[h].f);
+  memset(mem + adr + r, 0, siz - r);
   return (uint32_t)r;
 }
 
 static uint32_t files_write(uint32_t h, uint32_t adr, uint32_t siz) {
   files_check_handle(h, "Files.Write");
   mem_check_range(adr, siz, "Files.Write");
-  return (uint32_t)fwrite((char *)mem + adr, 1, siz, files[h].f);
+  return (uint32_t)fwrite(mem + adr, 1, siz, files[h].f);
 }
 
 static uint32_t files_length(uint32_t h, uint32_t _2, uint32_t _3) {
@@ -492,6 +500,15 @@ static void cpu_write_byte(struct RISC *cpu, uint32_t adr, uint32_t val) {
 
 /* Boot */
 
+static bool read_uint32(uint32_t *v, FILE *f) {
+  uint8_t buf[4];
+  if (fread(&buf, 1, 4, f) != 4) {
+    return false;
+  }
+  *v = le32_to_host(buf);
+  return true;
+}
+
 static void load_inner_core(void) {
   FILE *f = fopen(InnerCore, "rb");
   if (!f) {
@@ -502,18 +519,18 @@ static void load_inner_core(void) {
   }
 
   uint32_t siz, adr;
-  if (fread(&siz, 1, 4, f) != 4) {
+  if (!read_uint32(&siz, f)) {
     goto fail;
   }
   while (siz != 0) {
-    if (fread(&adr, 1, 4, f) != 4) {
+    if (!read_uint32(&adr, f)) {
       goto fail;
     }
     mem_check_range(adr, siz, InnerCore);
-    if (fread((char *)mem + adr, 1, siz, f) != siz) {
+    if (fread(mem + adr, 1, siz, f) != siz) {
       goto fail;
     }
-    if (fread(&siz, 1, 4, f) != 4) {
+    if (!read_uint32(&siz, f)) {
       goto fail;
     }
   }
