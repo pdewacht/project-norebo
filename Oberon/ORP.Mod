@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 18.4.2016  Oberon compiler for RISC in Oberon-07*)
+MODULE ORP; (*N. Wirth 1.7.97 / 1.5.2016  Oberon compiler for RISC in Oberon-07*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -205,6 +205,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 18.4.2016  Oberon compiler for RISC in Oberon-07
         END
       ELSIF (x.type.form = ORB.Array) & (par.type.form = ORB.Array) &
           (x.type.base = par.type.base) & (par.type.len < 0) THEN
+        IF ~par.rdo THEN CheckReadOnly(x) END ;
         ORG.OpenArrayParam(x)
       ELSIF (x.type.form = ORB.String) & varpar & par.rdo & (par.type.form = ORB.Array) & 
           (par.type.base.form = ORB.Char) & (par.type.len < 0) THEN ORG.StringParam(x)
@@ -783,8 +784,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 18.4.2016  Oberon compiler for RISC in Oberon-07
       x: ORG.Item; tp: ORB.Type; ptbase: PtrBase;
       expo: BOOLEAN; id: ORS.Ident;
   BEGIN (*sync*) pbsList := NIL;
-    IF (sym < ORS.const) & (sym # ORS.end) THEN ORS.Mark("declaration?");
-      REPEAT ORS.Get(sym) UNTIL (sym >= ORS.const) OR (sym = ORS.end)
+    IF (sym < ORS.const) & (sym # ORS.end) & (sym # ORS.return) THEN ORS.Mark("declaration?");
+      REPEAT ORS.Get(sym) UNTIL (sym >= ORS.const) OR (sym = ORS.end) OR (sym = ORS.return)
     END ;
     IF sym = ORS.const THEN
       ORS.Get(sym);

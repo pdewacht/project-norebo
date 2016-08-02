@@ -653,9 +653,9 @@ MODULE ORG; (* NW  18.4.2016  code generator in Oberon-07 for RISC*)
      VAR len: LONGINT;
    BEGIN loadAdr(x); len := x.type.len;
     IF len >= 0 THEN
-      IF y.b > len THEN ORS.Mark("string too long") END
-    ELSIF check THEN Put2(Ldr, RH, x.r, 4);  (*array length check*)
-      Put1(Cmp,RH, RH, y.b); Trap(NE, 3)
+      IF len <  y.b THEN ORS.Mark("string too long") END
+    ELSIF check THEN Put2(Ldr, RH, SP, x.a+4);  (*open array len, frame = 0hk*)
+      Put1(Cmp,RH, RH, y.b); Trap(LT, 3)
     END ;
     loadStringAdr(y);
     Put2(Ldr, RH, y.r, 0); Put1(Add, y.r, y.r, 4);
