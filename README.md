@@ -18,9 +18,17 @@ if you want to develop it further.
 ## PO2013 image build tools
 
 This repository also contains tools to build fresh PO2013 filesystem
-images. The script `build-po2013-image.py` handles it completely
-automatically, the corresponding CSV files lists the files that should
-be installed on the image.
+images.  Use it like so:
+
+    ./fetch-sources.py upstream
+    ./build-image.py upstream
+
+...where `upstream` is the name of the directory where the sources
+should live.  (Replace it with the name of your choice.) This will
+download the project sources, compile them, create runnable disk image
+`build/Oberon.dsk`.  The CSV build manifest controls which set of
+files should define the resulting system.  The disk image can be run
+on the [Project Oberon RISC emulator].
 
 Supporting Oberon modules are stored in `Norebo`: a virtual file
 system (`VDiskUtil`/`VFile`) and a static linker for the Inner Core.
@@ -55,3 +63,5 @@ of exit codes:
        105 | illegal procedure call
        106 | integer division by zero
        107 | assertion violated
+
+[Project Oberon RISC emulator]: https://github.com/pdewacht/oberon-risc-emu
