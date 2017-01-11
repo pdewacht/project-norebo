@@ -1,31 +1,8 @@
 #!/usr/bin/env python3
-import sys, os, os.path, logging, subprocess, re, csv, zipfile, io, requests
+import sys, os, os.path, logging, csv, subprocess
 
 NOREBO_ROOT = os.path.dirname(os.path.realpath(__file__))
 FILE_LIST = list(csv.DictReader(open(os.path.join(NOREBO_ROOT, 'build-po2013-image.csv'))))
-
-
-def download_files(target_dir):
-    with requests.Session() as session:
-        session.headers.update({'User-Agent': 'project-norebo/1.0'})
-        for fi in FILE_LIST:
-            resp = session.get(fi['url'])
-            resp.raise_for_status()
-            data = resp.content
-            if fi['mode'] in ('text', 'source'):
-                data = re.sub(b'\r?\n', b'\r', data)
-                with open(os.path.join(target_dir, fi['filename']), 'wb') as f:
-                    f.write(data)
-            elif fi['mode'] == 'archive':
-                fi['members'] = []
-                with zipfile.ZipFile(io.BytesIO(data)) as zf:
-                    for member in zf.infolist():
-                        fn = os.path.basename(member.filename)
-                        if not fn.endswith('.txt'):
-                            with open(os.path.join(target_dir, fn), 'wb') as f:
-                                f.write(zf.read(member))
-                            fi['members'].append(fn)
-
 
 def bulk_delete(dir, ext):
     for fn in os.listdir(dir):
@@ -77,17 +54,14 @@ def build_norebo(target_dir):
     bulk_rename(target_dir, 'rsx', 'rsc')
 
 
-def build_image(target_dir):
-    # sources_dir = mksubdir(target_dir, 'sources')
-    target_dir = os.path.realpath(target_dir)
+def build_image(sources_dir):
+    sources_dir  = os.path.realpath(sources_dir)
+
+    target_dir = os.path.join(NOREBO_ROOT, 'build')
     os.mkdir(target_dir)
-    sources_dir = mksubdir(target_dir, 'sources')
     norebo_dir = mksubdir(target_dir, 'norebo')
     compiler_dir = mksubdir(target_dir, 'compiler')
     oberon_dir = mksubdir(target_dir, 'oberon')
-
-    logging.info('Downloading sources')
-    download_files(sources_dir)
 
     logging.info('Building norebo')
     build_norebo(norebo_dir)
@@ -119,17 +93,15 @@ def build_image(target_dir):
         return '%s=>%s' % (src, dst)
 
     install_args = ['Oberon.dsk']
+    install_args.extend(copy(fn, fn) for fn in os.listdir(sources_dir))
+
     for fi in FILE_LIST:
-        if fi['mode'] in ('text', 'source'):
-            install_args.append(copy(fi['filename'], fi['filename']))
         if fi['mode'] == 'source':
             smb = fi['filename'].replace('.Mod', '.smb')
             rsx = fi['filename'].replace('.Mod', '.rsx')
             rsc = fi['filename'].replace('.Mod', '.rsc')
             install_args.append(copy(smb, smb))
             install_args.append(copy(rsx, rsc))
-        if fi['mode'] == 'archive':
-            install_args.extend(copy(fn, fn) for fn in fi['members'])
 
     norebo(['VDiskUtil.InstallFiles'] + install_args,
            working_directory=target_dir,
@@ -140,9 +112,8 @@ def build_image(target_dir):
 
 def main():
     logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
-    if len(sys.argv) != 2 or os.path.exists(sys.argv[1]):
-        logging.error("Usage: %s TARGET-DIR", __file__)
-        logging.error("  (TARGET_DIR must not already exist.)")
+    if len(sys.argv) != 2 or not os.path.exists(sys.argv[1]):
+        logging.error("Usage: %s SOURCES_DIR", __file__)
         sys.exit(1)
     build_image(sys.argv[1])
 
