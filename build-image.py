@@ -93,7 +93,7 @@ def build_image(sources_dir):
         return '%s=>%s' % (src, dst)
 
     install_args = ['Oberon.dsk']
-    install_args.extend(copy(fn, fn) for fn in os.listdir(sources_dir))
+    install_args.extend(copy(fn, fn) for fn in os.listdir(sources_dir) if not fn.startswith("."))
 
     for fi in FILE_LIST:
         if fi['mode'] == 'source':
