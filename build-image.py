@@ -2,7 +2,7 @@
 import sys, os, os.path, logging, csv, subprocess
 
 NOREBO_ROOT = os.path.dirname(os.path.realpath(__file__))
-FILE_LIST = list(csv.DictReader(open(os.path.join(NOREBO_ROOT, 'build-po2013-image.csv'))))
+FILE_LIST = list(csv.DictReader(open(os.path.join(NOREBO_ROOT, 'manifest.csv'))))
 
 def bulk_delete(dir, ext):
     for fn in os.listdir(dir):

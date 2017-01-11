@@ -2,7 +2,7 @@
 import sys, os.path, logging, re, csv, zipfile, io, requests
 
 NOREBO_ROOT = os.path.dirname(os.path.realpath(__file__))
-FILE_LIST = list(csv.DictReader(open(os.path.join(NOREBO_ROOT, 'build-po2013-image.csv'))))
+FILE_LIST = list(csv.DictReader(open(os.path.join(NOREBO_ROOT, 'manifest.csv'))))
 
 
 def download_files(upstream_dir):
