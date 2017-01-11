@@ -30,8 +30,8 @@ All this is based on code from PO2013.
 
 New files are always created in the current directory. Old files are
 first looked up in the current directory and if they are not found,
-they are searched for in the path defined by the OBERON_PATH
-environment variable. Files found via OBERON_PATH are always opened
+they are searched for in the path defined by the `OBERON_PATH`
+environment variable. Files found via `OBERON_PATH` are always opened
 read-only.
 
 ## Bugs
