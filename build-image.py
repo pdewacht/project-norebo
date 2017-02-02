@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, os, os.path, logging, csv, subprocess
+import sys, os, os.path, argparse, logging, csv, subprocess
 
 NOREBO_ROOT = os.path.dirname(os.path.realpath(__file__))
 FILE_LIST = list(csv.DictReader(open(os.path.join(NOREBO_ROOT, 'manifest.csv'))))
@@ -111,11 +111,21 @@ def build_image(sources_dir):
 
 
 def main():
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
-    if len(sys.argv) != 2 or not os.path.exists(sys.argv[1]):
-        logging.error("Usage: %s SOURCES_DIR", __file__)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+      '-d', '--debug', dest='debug', action='store_true', help='enable debug log output'
+    )
+    parser.add_argument('SOURCES')
+    args = parser.parse_args()
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
+    if not os.path.exists(args.SOURCES):
+        logging.error("%s: '%s': No such file or directory", __file__, args.SOURCES)
         sys.exit(1)
-    build_image(sys.argv[1])
+    elif not os.path.isdir(args.SOURCES):
+        logging.error("%s: '%s': Not a directory", __file__, args.SOURCES)
+        sys.exit(1)
+    build_image(args.SOURCES)
 
 
 if __name__ == '__main__':
