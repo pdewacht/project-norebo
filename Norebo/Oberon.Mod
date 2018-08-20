@@ -73,7 +73,7 @@ MODULE Oberon; (*derived from JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.
         RS232.Send(ORD(ch));
         INC(beg)
       END;
-      Texts.OpenBuf(B); Texts.Delete(T, beg, end, B)
+      NEW(B); Texts.OpenBuf(B); Texts.Delete(T, beg, end, B)
     END
   END OutputLog;
 
