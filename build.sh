@@ -58,7 +58,11 @@ echo '=== Stage 3 ==='
 cd build3
 export NOREBO_PATH="$ROOT/Norebo:$ROOT/Oberon:$ROOT/build2"
 compile_everything
-rename smb smx
+cd ..
+
+# Unhide the symbol files
+cd build2
+rename smx smb
 cd ..
 
 echo
