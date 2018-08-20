@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -361,6 +362,7 @@ static uint32_t filedir_enumerate_next(uint32_t adr, uint32_t _2, uint32_t _3) {
     mem_write_byte(adr, 0);
     return -1;
   }
+  assert(strlen(ent->d_name) < NameLength);
   strncpy((char *)mem + adr, ent->d_name, NameLength);
   return 0;
 }
