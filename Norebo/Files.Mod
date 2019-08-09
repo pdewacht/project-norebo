@@ -11,7 +11,7 @@ MODULE Files;  (*derived from NW 11.1.86 / 22.9.93 / 25.5.95 / 25.12.95 / 15.8.2
       END ;
 
     FileDesc =
-      RECORD handle: INTEGER;
+      RECORD handle, pos: INTEGER;
         registered: BOOLEAN;
         name: FileDir.FileName;
       END ;
@@ -42,7 +42,7 @@ MODULE Files;  (*derived from NW 11.1.86 / 22.9.93 / 25.5.95 / 25.12.95 / 15.8.2
     IF res = 0 THEN
       Norebo.SysReq(Norebo.filesOld, SYSTEM.ADR(namebuf), 0, 0);
       IF Norebo.res >= 0 THEN
-        NEW(f); f.handle := Norebo.res; f.name := namebuf; f.registered := TRUE;
+        NEW(f); f.handle := Norebo.res; f.pos := 0; f.name := namebuf; f.registered := TRUE;
       END
     END
     RETURN f
@@ -56,7 +56,7 @@ MODULE Files;  (*derived from NW 11.1.86 / 22.9.93 / 25.5.95 / 25.12.95 / 15.8.2
     IF res <= 0 THEN
       Norebo.SysReq(Norebo.filesNew, SYSTEM.ADR(namebuf), 0, 0);
       IF Norebo.res >= 0 THEN
-        NEW(f); f.handle := Norebo.res; f.name := namebuf; f.registered := FALSE
+        NEW(f); f.handle := Norebo.res; f.pos := 0; f.name := namebuf; f.registered := FALSE
       END
     END
     RETURN f
@@ -66,7 +66,7 @@ MODULE Files;  (*derived from NW 11.1.86 / 22.9.93 / 25.5.95 / 25.12.95 / 15.8.2
   BEGIN
     IF (f # NIL) & (f.name[0] # 0X) & ~f.registered THEN
       Norebo.SysReq(Norebo.filesRegister, f.handle, 0, 0);
-      f.registered := TRUE
+      f.registered := TRUE; f.pos := -1
     END
   END Register;
 
@@ -128,9 +128,12 @@ MODULE Files;  (*derived from NW 11.1.86 / 22.9.93 / 25.5.95 / 25.12.95 / 15.8.2
   END Base;
 
   PROCEDURE ReadRaw(VAR r: Rider; adr, siz: INTEGER);
-  BEGIN Norebo.SysReq(Norebo.filesSeek, r.file.handle, r.pos, 0);
+  BEGIN
+    IF r.pos # r.file.pos THEN
+      Norebo.SysReq(Norebo.filesSeek, r.file.handle, r.pos, 0);
+    END;
     Norebo.SysReq(Norebo.filesRead, r.file.handle, adr, siz);
-    INC(r.pos, Norebo.res);
+    INC(r.pos, Norebo.res); r.file.pos := r.pos;
     r.eof := Norebo.res < siz
   END ReadRaw;
 
@@ -178,9 +181,12 @@ MODULE Files;  (*derived from NW 11.1.86 / 22.9.93 / 25.5.95 / 25.12.95 / 15.8.2
   (*---------------------------Write---------------------------*)
 
   PROCEDURE WriteRaw(VAR r: Rider; adr, siz: INTEGER);
-  BEGIN Norebo.SysReq(Norebo.filesSeek, r.file.handle, r.pos, 0);
+  BEGIN
+    IF r.pos # r.file.pos THEN
+      Norebo.SysReq(Norebo.filesSeek, r.file.handle, r.pos, 0);
+    END;
     Norebo.SysReq(Norebo.filesWrite, r.file.handle, adr, siz);
-    INC(r.pos, Norebo.res);
+    INC(r.pos, Norebo.res); r.file.pos := r.pos;
     r.eof := Norebo.res < siz
   END WriteRaw;
 
