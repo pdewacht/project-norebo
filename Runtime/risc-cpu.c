@@ -10,7 +10,7 @@ enum {
   FAD, FSB, FML, FDV,
 };
 
-static void risc_single_step(struct RISC *risc);
+static void risc_single_step(const struct RISC_IO *risc_io, struct RISC *risc);
 static void risc_set_register(struct RISC *risc, int reg, uint32_t value);
 static uint32_t fp_add(uint32_t x, uint32_t y, bool u, bool v);
 static uint32_t fp_mul(uint32_t x, uint32_t y);
@@ -18,14 +18,14 @@ static uint32_t fp_div(uint32_t x, uint32_t y);
 static struct idiv { uint32_t quot, rem; } idiv(uint32_t x, uint32_t y, bool signed_div);
 
 
-void risc_run(struct RISC *risc) {
+void risc_run(const struct RISC_IO *io, struct RISC *risc) {
   for (;;) {
-    risc_single_step(risc);
+    risc_single_step(io, risc);
   }
 }
 
-static void risc_single_step(struct RISC *risc) {
-  uint32_t ir = risc->read_program(risc, risc->PC);
+static void risc_single_step(const struct RISC_IO *io, struct RISC *risc) {
+  uint32_t ir = io->read_program(risc, risc->PC);
   risc->PC++;
 
   const uint32_t pbit = 0x80000000;
@@ -178,16 +178,16 @@ static void risc_single_step(struct RISC *risc) {
     if ((ir & ubit) == 0) {
       uint32_t a_val;
       if ((ir & vbit) == 0) {
-        a_val = risc->read_word(risc, address);
+        a_val = io->read_word(risc, address);
       } else {
-        a_val = risc->read_byte(risc, address);
+        a_val = io->read_byte(risc, address);
       }
       risc_set_register(risc, a, a_val);
     } else {
       if ((ir & vbit) == 0) {
-        risc->write_word(risc, address, risc->R[a]);
+        io->write_word(risc, address, risc->R[a]);
       } else {
-        risc->write_byte(risc, address, (uint8_t)risc->R[a]);
+        io->write_byte(risc, address, (uint8_t)risc->R[a]);
       }
     }
   }

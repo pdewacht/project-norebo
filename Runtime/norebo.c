@@ -553,16 +553,18 @@ int main(int argc, char *argv[]) {
   load_inner_core();
   mem_write_word(12, MemBytes);
   mem_write_word(24, StackOrg);
-  struct RISC cpu = {
+  static const struct RISC_IO io = {
     .read_program = cpu_read_program,
     .read_word = cpu_read_word,
     .read_byte = cpu_read_byte,
     .write_word = cpu_write_word,
     .write_byte = cpu_write_byte,
+  };
+  struct RISC cpu = {
     .PC = 0,
     .R[12] = 0x20,
     .R[14] = StackOrg,
   };
-  risc_run(&cpu);
+  risc_run(&io, &cpu);
   return 0;
 }
