@@ -1,0 +1,243 @@
+--- 1/CoreLinker.Mod
++++ 2/CoreLinker.Mod
+@@ -1,22 +1,23 @@
+ MODULE CoreLinker;  (*derived from NW 20.10.2013*)
+-  IMPORT SYSTEM, Files, Texts, Oberon;
++  IMPORT Files := OBNCFiles, Texts, Oberon;
+   CONST versionkey = 1X; MT = 12; MTOrg = 20H; DescSize = 80;
+ 
+   TYPE Module = POINTER TO ModDesc;
+     ModuleName* = ARRAY 32 OF CHAR;
+     Buffer* = ARRAY 63 * 1024 DIV 4 OF INTEGER;
++    LinkProc = PROCEDURE(modname: ARRAY OF CHAR; corename: ARRAY OF CHAR);
+ 
+     ImageModDesc = RECORD
+         name: ModuleName;
+         next: INTEGER;
+         key, num, size, refcnt: INTEGER;
+-        data, code, imp, cmd, ent, ptr, unused: INTEGER;
++        data, code, imp, cmd, ent, ptr, unused: INTEGER
+       END ;
+ 
+     ModDesc = RECORD
+         next: Module;
+         addr: INTEGER;
+-        desc: ImageModDesc;
++        desc: ImageModDesc
+       END ;
+ 
+   VAR W: Texts.Writer;
+@@ -207,15 +208,31 @@
+     newmod := mod
+   END Load;
+ 
+-  PROCEDURE Copy(from, to, words: INTEGER);
+-    VAR x: INTEGER;
++  PROCEDURE Copy(from: ImageModDesc; VAR to: ARRAY OF INTEGER; offs: INTEGER);
++  VAR i: INTEGER;
+   BEGIN
+-    WHILE words > 0 DO
+-      SYSTEM.GET(from, x); SYSTEM.PUT(to, x);
+-      INC(from, 4); INC(to, 4); DEC(words)
+-    END
++    FOR i := 0 TO 7 DO
++      to[offs+i] := ORD(from.name[i*4]) + ORD(from.name[i*4+1]) * 100H + ORD(from.name[i*4+2]) * 10000H + ORD(from.name[i*4+3]) * 1000000H
++    END;
++    to[offs+8] := from.next;
++    to[offs+9] := from.key;
++    to[offs+10] := from.num;
++    to[offs+11] := from.size;
++    to[offs+12] := from.refcnt;
++    to[offs+13] := from.data;
++    to[offs+14] := from.code;
++    to[offs+15] := from.imp;
++    to[offs+16] := from.cmd;
++    to[offs+17] := from.ent;
++    to[offs+18] := from.ptr;
++    to[offs+19] := from.unused
+   END Copy;
+ 
++  PROCEDURE CopyString(VAR a,b: ARRAY OF CHAR);
++    VAR i: INTEGER;
++  BEGIN i := 0; WHILE a[i] # 0X DO b[i] := a[i]; INC(i) END; b[i] := 0X
++  END CopyString;
++
+   PROCEDURE Link*(name: ARRAY OF CHAR; VAR buffer: ARRAY OF INTEGER);
+     VAR mod: Module;
+       n: INTEGER;
+@@ -228,7 +245,7 @@
+     buffer[6] := 40000H;  (*module limit*)
+     (*store module descriptors*)
+     WHILE root # NIL DO
+-      Copy(SYSTEM.ADR(root.desc), SYSTEM.ADR(buffer) + root.addr, DescSize DIV 4);
++      Copy(root.desc, buffer, root.addr DIV 4);
+       root := root.next
+     END
+   END Link;
+@@ -261,12 +278,12 @@
+     END
+   END LinkSerialImage;
+ 
+-  PROCEDURE LinkCommand(linkProc: PROCEDURE(modname: ARRAY OF CHAR; corename: ARRAY OF CHAR));
+-    VAR S: Texts.Scanner;
++  PROCEDURE LinkCommand(linkProc: LinkProc);
++    VAR S: Texts.Scanner; T: Texts.Text;
+       modname, corename: ARRAY 32 OF CHAR;
+-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+-    IF S.class = Texts.Name THEN modname := S.s; Texts.Scan(S);
+-      IF S.class = Texts.Name THEN corename := S.s;
++  BEGIN NEW(T); Texts.Open(T, "CommandLine"); Texts.OpenScanner(S, T, 0); Texts.Scan(S);
++    IF S.class = Texts.Name THEN CopyString(S.s, modname); Texts.Scan(S);
++      IF S.class = Texts.Name THEN CopyString(S.s, corename);
+         linkProc(modname, corename);
+         Texts.WriteString(W, "Linking "); Texts.WriteString(W, corename);
+         IF res = 0 THEN
+@@ -287,5 +304,5 @@
+   BEGIN LinkCommand(LinkSerialImage)
+   END LinkSerial;
+ 
+-BEGIN Texts.OpenWriter(W)
++BEGIN Texts.OpenWriter(W); LinkSerial
+ END CoreLinker.
+--- 1/ORB.Mod
++++ 2/ORB.Mod
+@@ -1,5 +1,5 @@
+ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
+-  IMPORT Files, ORS;
++  IMPORT Files := OBNCFiles, ORS;
+   (*Definition of data types Object and Type, which together form the data structure
+     called "symbol table". Contains procedures for creation of Objects, and for search:
+     NewObj, this, thisimport, thisfield (and OpenScope, CloseScope).
+@@ -38,7 +38,7 @@
+       len*: INTEGER;  (*for arrays, len < 0 => open array; for records: adr of descriptor*)
+       dsc*, typobj*: Object;
+       base*: Type;  (*for arrays, records, pointers*)
+-      size*: INTEGER;  (*in bytes; always multiple of 4, except for Byte, Bool and Char*)
++      size*: INTEGER (*in bytes; always multiple of 4, except for Byte, Bool and Char*)
+     END ;
+ 
+   (* Object classes and the meaning of "val":
+@@ -413,7 +413,7 @@
+   enter("CHAR", Typ, charType, 0);
+   enter("LONGREAL", Typ, realType, 0);
+   enter("REAL", Typ, realType, 0);
+-  enter("INTEGER", Typ, intType, 0);
++  enter("LONGINT", Typ, intType, 0);
+   enter("INTEGER", Typ, intType, 0);
+   topScope := NIL; OpenScope; topScope.next := system; universe := topScope;
+   
+--- 1/ORG.Mod
++++ 2/ORG.Mod
+@@ -1,5 +1,5 @@
+ MODULE ORG; (* NW  18.4.2016  code generator in Oberon-07 for RISC*)
+-  IMPORT SYSTEM, Files, ORS, ORB;
++  IMPORT SYSTEM, Files := OBNCFiles, ORS, ORB;
+   (*Code generator for Oberon compiler for RISC processor.
+      Procedural interface to Parser OSAP; result in array "code".
+      Procedure Close writes code-files*)
+--- 1/ORP.Mod
++++ 2/ORP.Mod
+@@ -960,16 +960,14 @@
+   END Option;
+ 
+   PROCEDURE Compile*;
+-    VAR beg, end, time: INTEGER;
+-      T: Texts.Text;
++    VAR beg, time: INTEGER; T: Texts.Text;
+       S: Texts.Scanner;
+-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
++  BEGIN NEW(T); Texts.Open(T, "CommandLine");
++    Texts.OpenScanner(S, T, 0); Texts.Scan(S);
+     IF S.class = Texts.Char THEN
+       IF S.c = "@" THEN
+-        Option(S); Oberon.GetSelection(T, beg, end, time);
+         IF time >= 0 THEN ORS.Init(T, beg); Module END
+       ELSIF S.c = "^" THEN
+-        Option(S); Oberon.GetSelection(T, beg, end, time);
+         IF time >= 0 THEN
+           Texts.OpenScanner(S, T, beg); Texts.Scan(S);
+           IF S.class = Texts.Name THEN
+@@ -994,5 +992,5 @@
+ BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  18.4.2016");
+   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
+   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
+-  expression := expression0; Type := Type0; FormalType := FormalType0
++  expression := expression0; Type := Type0; FormalType := FormalType0; Compile
+ END ORP.
+--- 1/Texts.Mod
++++ 2/Texts.Mod
+@@ -1,5 +1,5 @@
+ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
+-  IMPORT Files, Fonts;
++  IMPORT Files := OBNCFiles, Fonts;
+ 
+   CONST (*scanner symbol classes*)
+     Inval* = 0;         (*invalid symbol*)
+@@ -33,7 +33,7 @@
+       notify*: Notifier;
+       trailer: Piece;
+       pce: Piece;  (*cache*)
+-      org: INTEGER; (*cache*)
++      org: INTEGER (*cache*)
+     END;
+ 
+     Reader* = RECORD
+@@ -51,7 +51,6 @@
+       line*, class*: INTEGER;
+       i*: INTEGER;
+       x*: REAL;
+-      y*: LONGREAL;
+       c*: CHAR;
+       len*: INTEGER;
+       s*: ARRAY 32 OF CHAR
+@@ -87,7 +86,7 @@
+       f: Files.File;
+       FName: ARRAY 32 OF CHAR;
+       Dict: ARRAY 32 OF Fonts.Font;
+-  BEGIN f := Files.Base(R); N := 1; Q := Trailer(); p := Q;
++  BEGIN ASSERT(FALSE); (*f := Files.Base(R); N := 1; Q := Trailer(); p := Q;
+     Files.ReadInt(R, off); Files.ReadByte(R, bt); fno := bt;
+     WHILE fno # 0 DO
+       IF fno = N THEN
+@@ -104,6 +103,7 @@
+     END;
+     p.next := Q; Q.prev := p;
+     T.trailer := Q; Files.ReadInt(R, T.len); (*Files.Set(R, f, Files.Pos(R) + T.len)*)
++    *)
+   END Load;
+ 
+   PROCEDURE Open* (T: Text; name: ARRAY OF CHAR);
+@@ -131,7 +131,7 @@
+       N, n: INTEGER;
+       ch: CHAR;
+       Dict: ARRAY 32, 32 OF CHAR;
+-  BEGIN pos := Files.Pos(W); Files.WriteInt(W, 0); (*place holder*)
++  BEGIN ASSERT(FALSE); (*pos := Files.Pos(W); Files.WriteInt(W, 0); (*place holder*)
+     N := 1; p := T.trailer.next;
+     WHILE p # T.trailer DO
+       rlen := p.len; q := p.next;
+@@ -156,6 +156,7 @@
+     Files.Set(W, Files.Base(W), pos); Files.WriteInt(W, off); (*fixup*)
+     T.changed := FALSE;
+     IF T.notify # NIL THEN T.notify(T, unmark, 0, 0) END
++    *)
+   END Store;
+ 
+   PROCEDURE Close*(T: Text; name: ARRAY OF CHAR);
+@@ -469,7 +470,7 @@
+  PROCEDURE WriteReal* (VAR W: Writer; x: REAL; n: INTEGER);
+     VAR e, i, m: INTEGER;
+       d: ARRAY 16 OF CHAR;
+-  BEGIN e := ASR(ORD(x), 23) MOD 100H;  (*binary exponent*)
++  BEGIN ASSERT(FALSE);(*e := ASR(ORD(x), 23) MOD 100H;  (*binary exponent*)
+     IF e = 0 THEN
+       WriteString(W, "  0 ");
+       WHILE n >= 3 DO Write(W, " "); DEC(n) END
+@@ -490,6 +491,7 @@
+        IF e < 0 THEN Write(W, "-"); e := -e ELSE Write(W, "+") END ;
+       Write(W, CHR(e DIV 10 + 30H)); Write(W, CHR(e MOD 10 + 30H))
+     END
++    *)
+   END WriteReal;
+ 
+   PROCEDURE WriteRealFix* (VAR W: Writer; x: REAL; n, k: INTEGER);

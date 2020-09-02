@@ -1,0 +1,37 @@
+--- ORS0.Mod	2020-09-02 22:38:44.612634203 +0200
++++ ORS.Mod	2020-09-02 22:39:44.806713267 +0200
+@@ -114,7 +114,7 @@
+ 
+   PROCEDURE Ten(e: LONGINT): REAL;
+     VAR x, t: REAL;
+-  BEGIN x := 1.0; t := 10.0;
++  BEGIN x := FLT(1); t := FLT(10);
+     WHILE e > 0 DO
+       IF ODD(e) THEN x := t * x END ;
+       t := t * t; e := e DIV 2
+@@ -154,10 +154,10 @@
+           INC(i)
+         UNTIL i = n;
+         sym := int; ival := k
+-      ELSE (*real number*) x := 0.0; e := 0;
+-        REPEAT  (*integer part*) x := x * 10.0 + FLT(d[i]); INC(i) UNTIL i = n;
++      ELSE (*real number*) x := FLT(0); e := 0;
++        REPEAT  (*integer part*) x := x * FLT(10) + FLT(d[i]); INC(i) UNTIL i = n;
+         WHILE (ch >= "0") & (ch <= "9") DO  (*fraction*)
+-          x := x * 10.0 + FLT(ORD(ch) - 30H); DEC(e); Texts.Read(R, ch)
++          x := x * FLT(10) + FLT(ORD(ch) - 30H); DEC(e); Texts.Read(R, ch)
+         END ;
+         IF (ch = "E") OR (ch = "D") THEN  (*scale factor*)
+           Texts.Read(R, ch); s := 0; 
+@@ -173,9 +173,9 @@
+           END
+         END ;
+         IF e < 0 THEN
+-          IF e >= -maxExp THEN x := x / Ten(-e) ELSE x := 0.0 END
++          IF e >= -maxExp THEN x := x / Ten(-e) ELSE x := FLT(0) END
+         ELSIF e > 0 THEN
+-          IF e <= maxExp THEN x := Ten(e) * x ELSE x := 0.0; Mark("too large") END
++          IF e <= maxExp THEN x := Ten(e) * x ELSE x := FLT(0); Mark("too large") END
+         END ;
+         sym := real; rval := x
+       END
